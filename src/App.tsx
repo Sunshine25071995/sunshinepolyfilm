@@ -21,6 +21,7 @@ import {
 import Dashboard from './components/Dashboard';
 import TransactionForm from './components/TransactionForm';
 import TransactionHistory from './components/TransactionHistory';
+import InstallPrompt from './components/InstallPrompt';
 import { cn } from './lib/utils';
 
 export default function App() {
@@ -81,6 +82,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <Toaster position="top-center" />
+      <InstallPrompt />
       
       {/* Header */}
       <header className="sticky top-0 z-30 flex items-center justify-between bg-white px-6 py-4 shadow-sm">
