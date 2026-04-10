@@ -81,7 +81,6 @@ export default function TransactionForm({ type, chemicals, onComplete, editData 
         quantityKg: qty,
         date: new Date(formData.date),
         batchRef: formData.batchRef || null,
-        createdBy: auth.currentUser?.email,
         updatedAt: serverTimestamp(),
         ...(editData ? {} : { createdAt: serverTimestamp() })
       };

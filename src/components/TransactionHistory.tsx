@@ -42,14 +42,13 @@ export default function TransactionHistory({ onEdit }: TransactionHistoryProps) 
   const exportToCSV = () => {
     if (transactions.length === 0) return;
     
-    const headers = ['Date', 'Chemical', 'Type', 'Quantity (kg)', 'Batch Ref', 'User'];
+    const headers = ['Date', 'Chemical', 'Type', 'Quantity (kg)', 'Batch Ref'];
     const rows = transactions.map(t => [
       format(t.date, 'yyyy-MM-dd HH:mm'),
       t.chemicalName,
       t.type,
       t.quantityKg,
-      t.batchRef || '',
-      t.createdBy || ''
+      t.batchRef || ''
     ]);
 
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");

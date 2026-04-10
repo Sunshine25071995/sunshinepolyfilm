@@ -14,8 +14,6 @@ import {
   PlusCircle, 
   MinusCircle, 
   History, 
-  LogOut, 
-  LogIn,
   Package,
   Share2,
   Download
@@ -26,40 +24,35 @@ import TransactionHistory from './components/TransactionHistory';
 import { cn } from './lib/utils';
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [chemicals, setChemicals] = useState<Chemical[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'purchase' | 'usage' | 'history'>('dashboard');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-
     // Initialize chemicals if they don't exist
     const initChemicals = async () => {
-      for (const name of FIXED_CHEMICALS) {
-        const id = name.toLowerCase().replace(/\s+/g, '-');
-        const chemicalRef = doc(db, 'chemicals', id);
-        const snap = await getDoc(chemicalRef);
-        if (!snap.exists()) {
-          await setDoc(chemicalRef, {
-            id,
-            name,
-            currentStockKg: 0,
-            unit: name === 'Resin Bags' ? 'bags' : 'kg',
-            kgPerBag: name === 'Resin Bags' ? 25 : 0,
-            lowStockThreshold: 100,
-            lastUpdated: new Date()
-          });
+      try {
+        for (const name of FIXED_CHEMICALS) {
+          const id = name.toLowerCase().replace(/\s+/g, '-');
+          const chemicalRef = doc(db, 'chemicals', id);
+          const snap = await getDoc(chemicalRef);
+          if (!snap.exists()) {
+            await setDoc(chemicalRef, {
+              id,
+              name,
+              currentStockKg: 0,
+              unit: name === 'Resin Bags' ? 'bags' : 'kg',
+              kgPerBag: name === 'Resin Bags' ? 25 : 0,
+              lowStockThreshold: 100,
+              lastUpdated: new Date()
+            });
+          }
         }
+      } catch (err) {
+        console.error("Init error:", err);
+      } finally {
+        setLoading(false);
       }
     };
     initChemicals();
@@ -71,35 +64,16 @@ export default function App() {
       setChemicals(data);
     }, (error) => {
       console.error("Firestore Error:", error);
-      toast.error("Failed to sync data. Check permissions.");
+      toast.error("Failed to sync data.");
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, []);
 
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-slate-50 p-6 text-center">
-        <div className="mb-8 rounded-full bg-white p-6 shadow-xl">
-          <Package className="h-16 w-16 text-slate-900" />
-        </div>
-        <h1 className="mb-2 text-3xl font-bold text-slate-900">Sunshine</h1>
-        <p className="mb-8 text-slate-600">Secure chemical inventory tracking for PVC film manufacturing.</p>
-        <button
-          onClick={signInWithGoogle}
-          className="flex items-center gap-3 rounded-xl bg-slate-900 px-8 py-4 font-semibold text-white shadow-lg transition-all hover:bg-slate-800 active:scale-95"
-        >
-          <LogIn className="h-5 w-5" />
-          Sign in with Google
-        </button>
       </div>
     );
   }
@@ -116,13 +90,6 @@ export default function App() {
           </div>
           <h1 className="text-lg font-bold text-slate-900">Sunshine</h1>
         </div>
-        <button
-          onClick={logout}
-          className="rounded-full p-2 text-slate-500 hover:bg-slate-100 transition-colors"
-          title="Logout"
-        >
-          <LogOut className="h-5 w-5" />
-        </button>
       </header>
 
       {/* Main Content */}
