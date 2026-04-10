@@ -7,7 +7,11 @@ import { ArrowUpRight, ArrowDownLeft, Filter, Calendar, Download } from 'lucide-
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
 
-export default function TransactionHistory() {
+interface TransactionHistoryProps {
+  onEdit?: (transaction: Transaction) => void;
+}
+
+export default function TransactionHistory({ onEdit }: TransactionHistoryProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'purchase' | 'usage'>('all');
@@ -98,7 +102,11 @@ export default function TransactionHistory() {
           </div>
         ) : transactions.length > 0 ? (
           transactions.map((t) => (
-            <div key={t.id} className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm">
+            <button 
+              key={t.id} 
+              onClick={() => onEdit?.(t)}
+              className="flex w-full items-center gap-4 rounded-2xl bg-white p-4 shadow-sm transition-all hover:ring-2 hover:ring-slate-900 active:scale-[0.98]"
+            >
               <div className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                 t.type === 'purchase' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
@@ -106,7 +114,7 @@ export default function TransactionHistory() {
                 {t.type === 'purchase' ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownLeft className="h-5 w-5" />}
               </div>
               
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 text-left">
                 <div className="flex items-center justify-between">
                   <h4 className="truncate font-bold text-slate-900">{t.chemicalName}</h4>
                   <span className={cn(
@@ -123,7 +131,7 @@ export default function TransactionHistory() {
                   {t.batchRef && <span>Batch: {t.batchRef}</span>}
                 </div>
               </div>
-            </div>
+            </button>
           ))
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-slate-400">

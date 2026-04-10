@@ -30,6 +30,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [chemicals, setChemicals] = useState<Chemical[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'purchase' | 'usage' | 'history'>('dashboard');
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -90,7 +91,7 @@ export default function App() {
         <div className="mb-8 rounded-full bg-white p-6 shadow-xl">
           <Package className="h-16 w-16 text-slate-900" />
         </div>
-        <h1 className="mb-2 text-3xl font-bold text-slate-900">PVC Stock Manager</h1>
+        <h1 className="mb-2 text-3xl font-bold text-slate-900">Sunshine</h1>
         <p className="mb-8 text-slate-600">Secure chemical inventory tracking for PVC film manufacturing.</p>
         <button
           onClick={signInWithGoogle}
@@ -113,7 +114,7 @@ export default function App() {
           <div className="rounded-lg bg-slate-900 p-1.5">
             <Package className="h-5 w-5 text-white" />
           </div>
-          <h1 className="text-lg font-bold text-slate-900">PVC Stock</h1>
+          <h1 className="text-lg font-bold text-slate-900">Sunshine</h1>
         </div>
         <button
           onClick={logout}
@@ -127,9 +128,25 @@ export default function App() {
       {/* Main Content */}
       <main className="mx-auto max-w-md p-4">
         {activeTab === 'dashboard' && <Dashboard chemicals={chemicals} />}
-        {activeTab === 'purchase' && <TransactionForm type="purchase" chemicals={chemicals} onComplete={() => setActiveTab('dashboard')} />}
-        {activeTab === 'usage' && <TransactionForm type="usage" chemicals={chemicals} onComplete={() => setActiveTab('dashboard')} />}
-        {activeTab === 'history' && <TransactionHistory />}
+        {(activeTab === 'purchase' || activeTab === 'usage' || editingTransaction) && (
+          <TransactionForm 
+            type={editingTransaction ? editingTransaction.type : (activeTab === 'purchase' ? 'purchase' : 'usage')} 
+            chemicals={chemicals} 
+            editData={editingTransaction}
+            onComplete={() => {
+              setActiveTab('dashboard');
+              setEditingTransaction(null);
+            }} 
+          />
+        )}
+        {activeTab === 'history' && (
+          <TransactionHistory 
+            onEdit={(t) => {
+              setEditingTransaction(t);
+              setActiveTab('purchase'); // Just to trigger the form view
+            }} 
+          />
+        )}
       </main>
 
       {/* Bottom Navigation */}

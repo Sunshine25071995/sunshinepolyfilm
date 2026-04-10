@@ -53,20 +53,41 @@ export default function Dashboard({ chemicals }: DashboardProps) {
         
         const file = new File([blob], `stock-report-${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
         
+        const lowStockChemicals = chemicals.filter(c => c.currentStockKg <= (c.lowStockThreshold || 100));
+        const lowStockText = lowStockChemicals.length > 0 
+          ? `\n\n⚠️ *Low Stock Alert:* \n${lowStockChemicals.map(c => `• ${c.name} (${formatQuantity(c.currentStockKg, c.kgPerBag)})`).join('\n')}`
+          : '\n\n✅ *All stock levels are healthy.*';
+
+        const shareText = `☀️ *Sunshine Chemical Stock Report*\n📅 Date: ${new Date().toLocaleDateString('en-IN', { dateStyle: 'medium' })}${lowStockText}\n\n📊 _Generated via Sunshine App_`;
+
         if (navigator.share) {
-          await navigator.share({
-            files: [file],
-            title: 'PVC Chemical Stock Report',
-            text: `Current Stock Report - ${new Date().toLocaleDateString()}`
-          });
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'Sunshine Stock Report',
+              text: shareText
+            });
+          } catch (err) {
+            // If file sharing fails, try text only
+            await navigator.share({
+              title: 'Sunshine Stock Report',
+              text: shareText
+            });
+          }
         } else {
-          // Fallback: download
+          // Fallback: download and copy text
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
           a.download = `stock-report.png`;
           a.click();
-          toast.success('Report downloaded (Sharing not supported on this browser)');
+          
+          try {
+            await navigator.clipboard.writeText(shareText);
+            toast.success('Report downloaded & text copied to clipboard! 📋');
+          } catch (err) {
+            toast.success('Report downloaded! 📥');
+          }
         }
       });
       toast.dismiss();
@@ -135,7 +156,7 @@ export default function Dashboard({ chemicals }: DashboardProps) {
           className="mb-6 border-b pb-4"
           style={{ borderBottomColor: COLORS.slate200 }}
         >
-          <h2 className="text-2xl font-black" style={{ color: COLORS.slate900 }}>PVC Stock Status</h2>
+          <h2 className="text-2xl font-black" style={{ color: COLORS.slate900 }}>☀️ Sunshine Stock</h2>
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.slate400 }}>
             {new Date().toLocaleDateString('en-IN', { dateStyle: 'full' })}
           </p>
