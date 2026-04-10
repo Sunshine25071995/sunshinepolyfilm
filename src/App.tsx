@@ -4,8 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { auth, db, signInWithGoogle, logout } from './lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { db } from './lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, getDoc } from 'firebase/firestore';
 import { Chemical, Transaction, FIXED_CHEMICALS } from './types';
 import { Toaster, toast } from 'sonner';
@@ -14,9 +13,7 @@ import {
   PlusCircle, 
   MinusCircle, 
   History, 
-  Package,
-  Share2,
-  Download
+  Package
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import TransactionForm from './components/TransactionForm';
@@ -31,6 +28,11 @@ export default function App() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
+    if (!db) {
+      setLoading(false);
+      return;
+    }
+
     // Initialize chemicals if they don't exist
     const initChemicals = async () => {
       try {
@@ -59,14 +61,19 @@ export default function App() {
     initChemicals();
 
     // Listen for real-time updates
-    const q = query(collection(db, 'chemicals'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => doc.data() as Chemical);
-      setChemicals(data);
-    }, (error) => {
-      console.error("Firestore Error:", error);
-      toast.error("Failed to sync data.");
-    });
+    let unsubscribe = () => {};
+    try {
+      const q = query(collection(db, 'chemicals'), orderBy('name', 'asc'));
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const data = snapshot.docs.map(doc => doc.data() as Chemical);
+        setChemicals(data);
+      }, (error) => {
+        console.error("Firestore Error:", error);
+        toast.error("Failed to sync data.");
+      });
+    } catch (err) {
+      console.error("Snapshot error:", err);
+    }
 
     return () => unsubscribe();
   }, []);

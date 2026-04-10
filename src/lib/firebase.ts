@@ -1,12 +1,21 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+let app;
+let auth: any;
+let db: any;
+
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+} catch (error) {
+  console.error("Firebase initialization failed:", error);
+}
+
+export { auth, db };
 export const googleProvider = new GoogleAuthProvider();
-
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
-export const logout = () => signOut(auth);
+export const signInWithGoogle = () => auth ? signInWithPopup(auth, googleProvider) : Promise.reject("Auth not initialized");
+export const logout = () => auth ? signOut(auth) : Promise.reject("Auth not initialized");
