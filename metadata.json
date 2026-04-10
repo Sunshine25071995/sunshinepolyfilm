@@ -1,0 +1,5 @@
+{
+  "name": "PVC Chemical Stock Manager",
+  "description": "A mobile-first stock management app for PVC shrink film manufacturing, featuring real-time tracking, purchase/usage logs, and WhatsApp report sharing.",
+  "requestFramePermissions": []
+}

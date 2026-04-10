@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: chemicals
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required)
+    //   - currentStockKg: number (required)
+    //   - unit: string (optional)
+    //   - kgPerBag: number (optional)
+    //   - lowStockThreshold: number (optional)
+    //   - lastUpdated: timestamp (optional)
+    //
+    // Collection: transactions
+    // Fields:
+    //   - id: string (required)
+    //   - date: timestamp (required)
+    //   - chemicalId: string (required)
+    //   - chemicalName: string (required)
+    //   - type: string (purchase | usage) (required)
+    //   - quantityKg: number (required)
+    //   - batchRef: string (optional)
+    //   - createdBy: string (optional)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         request.auth.token.email == "sunshinepolyfilm@gmail.com");
+    }
+
+    function isValidChemical(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.currentStockKg is number;
+    }
+
+    function isValidTransaction(data) {
+      return data.chemicalId is string &&
+             data.type in ['purchase', 'usage'] &&
+             data.quantityKg is number && data.quantityKg > 0;
+    }
+
+    match /chemicals/{chemicalId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidChemical(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTransaction(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+  }
+}

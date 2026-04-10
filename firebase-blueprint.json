@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "Chemical": {
+      "title": "Chemical",
+      "description": "Represents a chemical in stock",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "currentStockKg": { "type": "number" },
+        "unit": { "type": "string", "enum": ["kg", "bags"] },
+        "kgPerBag": { "type": "number", "description": "Only for resin bags" },
+        "lowStockThreshold": { "type": "number" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "currentStockKg"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A purchase or usage entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "chemicalId": { "type": "string" },
+        "chemicalName": { "type": "string" },
+        "type": { "type": "string", "enum": ["purchase", "usage"] },
+        "quantityKg": { "type": "number" },
+        "batchRef": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["date", "chemicalId", "type", "quantityKg"]
+    }
+  },
+  "firestore": {
+    "/chemicals/{chemicalId}": {
+      "schema": "Chemical",
+      "description": "Master list of chemicals and their current stock"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Log of all purchases and usage"
+    }
+  }
+}
