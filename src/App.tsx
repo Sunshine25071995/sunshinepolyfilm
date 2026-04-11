@@ -19,15 +19,22 @@ import Dashboard from './components/Dashboard';
 import TransactionForm from './components/TransactionForm';
 import TransactionHistory from './components/TransactionHistory';
 import InstallPrompt from './components/InstallPrompt';
+import Login from './components/Login';
 import { cn } from './lib/utils';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [chemicals, setChemicals] = useState<Chemical[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'purchase' | 'usage' | 'history'>('dashboard');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
+    const authStatus = localStorage.getItem('sunshine_auth');
+    if (authStatus === 'true') {
+      setIsAuthenticated(true);
+    }
+
     if (!db) {
       setLoading(false);
       return;
@@ -86,6 +93,10 @@ export default function App() {
     );
   }
 
+  if (!isAuthenticated) {
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <Toaster position="top-center" />
@@ -99,6 +110,15 @@ export default function App() {
           </div>
           <h1 className="text-lg font-bold text-slate-900">Sunshine</h1>
         </div>
+        <button 
+          onClick={() => {
+            localStorage.removeItem('sunshine_auth');
+            setIsAuthenticated(false);
+          }}
+          className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-slate-900"
+        >
+          Logout
+        </button>
       </header>
 
       {/* Main Content */}
@@ -110,7 +130,7 @@ export default function App() {
             chemicals={chemicals} 
             editData={editingTransaction}
             onComplete={() => {
-              setActiveTab('dashboard');
+              // Stay on same tab, just clear editing state
               setEditingTransaction(null);
             }} 
           />

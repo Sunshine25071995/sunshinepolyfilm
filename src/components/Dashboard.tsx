@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Chemical } from '../types';
 import { formatQuantity, cn } from '../lib/utils';
-import { Share2, AlertTriangle, Search, ArrowUpNarrowWide, ArrowDownNarrowWide } from 'lucide-react';
+import { Share2, AlertTriangle, Search, ArrowUpNarrowWide, ArrowDownNarrowWide, MessageCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
 
@@ -20,13 +20,15 @@ const COLORS = {
   amber500: '#f59e0b',
   amber600: '#d97706',
   emerald500: '#10b981',
-  white: '#ffffff'
+  white: '#ffffff',
+  whatsapp: '#25D366'
 };
 
 export default function Dashboard({ chemicals }: DashboardProps) {
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none');
   const dashboardRef = useRef<HTMLDivElement>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const filteredChemicals = chemicals
     .filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
@@ -36,31 +38,37 @@ export default function Dashboard({ chemicals }: DashboardProps) {
       return 0;
     });
 
-  const shareAsImage = async () => {
-    if (!dashboardRef.current) return;
+  const shareToWhatsApp = async () => {
+    if (!reportRef.current) return;
     
     try {
-      toast.loading('Generating report...');
-      const canvas = await html2canvas(dashboardRef.current, {
-        backgroundColor: COLORS.slate50,
-        scale: 2,
+      toast.loading('Generating WhatsApp report...');
+      
+      // Ensure the report is visible for capturing
+      reportRef.current.style.display = 'block';
+      
+      const canvas = await html2canvas(reportRef.current, {
+        backgroundColor: COLORS.white,
+        scale: 3, // High quality
         logging: false,
         useCORS: true
       });
       
+      reportRef.current.style.display = 'none';
+      
       canvas.toBlob(async (blob) => {
         if (!blob) return;
         
-        const file = new File([blob], `stock-report-${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
+        const file = new File([blob], `sunshine-report-${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
         
         const lowStockChemicals = chemicals.filter(c => c.currentStockKg <= (c.lowStockThreshold || 100));
         const lowStockText = lowStockChemicals.length > 0 
-          ? `\n\n⚠️ *Low Stock Alert:* \n${lowStockChemicals.map(c => `• ${c.name} (${formatQuantity(c.currentStockKg, c.kgPerBag)})`).join('\n')}`
+          ? `\n\n⚠️ *LOW STOCK ALERT:* \n${lowStockChemicals.map(c => `• *${c.name}*: ${formatQuantity(c.currentStockKg, c.kgPerBag)} 🚨`).join('\n')}`
           : '\n\n✅ *All stock levels are healthy.*';
 
-        const shareText = `☀️ *Sunshine Chemical Stock Report*\n📅 Date: ${new Date().toLocaleDateString('en-IN', { dateStyle: 'medium' })}${lowStockText}\n\n📊 _Generated via Sunshine App_`;
+        const shareText = `☀️ *SUNSHINE STOCK REPORT*\n📅 *Date:* ${new Date().toLocaleDateString('en-IN', { dateStyle: 'medium' })}${lowStockText}\n\n📊 _Generated via Sunshine App_`;
 
-        if (navigator.share) {
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
               files: [file],
@@ -68,32 +76,28 @@ export default function Dashboard({ chemicals }: DashboardProps) {
               text: shareText
             });
           } catch (err) {
-            // If file sharing fails, try text only
-            await navigator.share({
-              title: 'Sunshine Stock Report',
-              text: shareText
-            });
+            // Fallback to WhatsApp URL if file sharing fails
+            const encodedText = encodeURIComponent(shareText);
+            window.open(`https://wa.me/?text=${encodedText}`, '_blank');
           }
         } else {
-          // Fallback: download and copy text
+          // Fallback: download and open WhatsApp
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `stock-report.png`;
+          a.download = `sunshine-report.png`;
           a.click();
           
-          try {
-            await navigator.clipboard.writeText(shareText);
-            toast.success('Report downloaded & text copied to clipboard! 📋');
-          } catch (err) {
-            toast.success('Report downloaded! 📥');
-          }
+          const encodedText = encodeURIComponent(shareText);
+          window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+          toast.success('Report downloaded! Share it on WhatsApp manually.');
         }
       });
       toast.dismiss();
     } catch (error) {
       console.error('Share error:', error);
       toast.error('Failed to generate report');
+      if (reportRef.current) reportRef.current.style.display = 'none';
     }
   };
 
@@ -137,61 +141,42 @@ export default function Dashboard({ chemicals }: DashboardProps) {
           </div>
           
           <button
-            onClick={shareAsImage}
-            className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition-colors"
+            onClick={shareToWhatsApp}
+            className="flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-emerald-600 transition-colors"
           >
-            <Share2 className="h-3.5 w-3.5" />
-            Share Report
+            <MessageCircle className="h-3.5 w-3.5" />
+            WhatsApp
           </button>
         </div>
       </div>
 
-      {/* Stock Cards */}
-      <div 
-        ref={dashboardRef} 
-        className="grid gap-4 p-4 rounded-3xl"
-        style={{ backgroundColor: COLORS.slate50 }}
-      >
-        <div 
-          className="mb-6 border-b pb-4"
-          style={{ borderBottomColor: COLORS.slate200 }}
-        >
-          <h2 className="text-2xl font-black" style={{ color: COLORS.slate900 }}>☀️ Sunshine Stock</h2>
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.slate400 }}>
-            {new Date().toLocaleDateString('en-IN', { dateStyle: 'full' })}
-          </p>
-        </div>
-        
+      {/* Stock Cards - Small Design */}
+      <div className="grid grid-cols-2 gap-3">
         {filteredChemicals.map((chemical) => {
           const isLow = chemical.currentStockKg <= (chemical.lowStockThreshold || 100);
           return (
             <div
               key={chemical.id}
-              className="relative overflow-hidden rounded-2xl p-5 shadow-sm transition-all active:scale-[0.98]"
-              style={{ 
-                backgroundColor: COLORS.white,
-                border: isLow ? `1px solid ${COLORS.amber200}` : 'none'
-              }}
+              className={cn(
+                "relative flex flex-col justify-between overflow-hidden rounded-xl bg-white p-3 shadow-sm transition-all active:scale-[0.98]",
+                isLow && "ring-1 ring-amber-200"
+              )}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-bold" style={{ color: COLORS.slate900 }}>{chemical.name}</h3>
-                  <p className="mt-1 text-2xl font-black" style={{ color: COLORS.slate900 }}>
-                    {formatQuantity(chemical.currentStockKg, chemical.kgPerBag)}
-                  </p>
-                </div>
-                {isLow && (
-                  <div 
-                    className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
-                    style={{ backgroundColor: COLORS.amber50, color: COLORS.amber600 }}
-                  >
-                    <AlertTriangle className="h-3 w-3" />
-                    Low Stock
-                  </div>
-                )}
+              <div className="flex items-start justify-between gap-1">
+                <h3 className="text-[17px] font-bold text-blue-600 uppercase tracking-wider truncate">{chemical.name}</h3>
+                {isLow && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />}
               </div>
               
-              <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: COLORS.slate100 }}>
+              <div className="mt-1">
+                <p className={cn(
+                  "text-sm font-black",
+                  isLow ? "text-amber-600" : "text-slate-900"
+                )}>
+                  {formatQuantity(chemical.currentStockKg, chemical.kgPerBag)}
+                </p>
+              </div>
+              
+              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-100">
                 <div 
                   className="h-full transition-all duration-500"
                   style={{ 
@@ -203,14 +188,56 @@ export default function Dashboard({ chemicals }: DashboardProps) {
             </div>
           );
         })}
-        
-        {filteredChemicals.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12" style={{ color: COLORS.slate400 }}>
-            <Search className="mb-2 h-12 w-12 opacity-20" />
-            <p>No chemicals found</p>
-          </div>
-        )}
       </div>
+
+      {/* Hidden Report for Image Generation */}
+      <div 
+        ref={reportRef}
+        style={{ 
+          display: 'none', 
+          width: '400px', 
+          padding: '24px', 
+          backgroundColor: '#ffffff',
+          fontFamily: 'sans-serif'
+        }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: '#0f172a' }}>☀️ SUNSHINE STOCK</h2>
+          <p style={{ margin: '4px 0 0', fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+            {new Date().toLocaleDateString('en-IN', { dateStyle: 'full' })}
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          {chemicals.map(c => {
+            const isLow = c.currentStockKg <= (c.lowStockThreshold || 100);
+            return (
+              <div key={c.id} style={{ 
+                padding: '10px', 
+                borderRadius: '12px', 
+                backgroundColor: isLow ? '#fffbeb' : '#f8fafc',
+                border: isLow ? '1px solid #fde68a' : '1px solid #e2e8f0'
+              }}>
+                <p style={{ margin: 0, fontSize: '9px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>{c.name}</p>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: 900, color: isLow ? '#d97706' : '#0f172a' }}>
+                  {formatQuantity(c.currentStockKg, c.kgPerBag)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        
+        <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '8px', color: '#94a3b8' }}>
+          Generated via Sunshine App • sunshinepolyfilm.com
+        </div>
+      </div>
+
+      {filteredChemicals.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+          <Search className="mb-2 h-12 w-12 opacity-20" />
+          <p>No chemicals found</p>
+        </div>
+      )}
     </div>
   );
 }
